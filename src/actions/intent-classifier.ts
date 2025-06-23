@@ -17,10 +17,23 @@ export interface UserIntent {
   reasoning: string;
 }
 
-export async function classifyUserIntent(userMessage: string): Promise<UserIntent> {
+export async function classifyUserIntent(userMessage: string, conversationContext?: string): Promise<UserIntent> {
+  const contextSection = conversationContext ? `
+RECENT CONVERSATION CONTEXT:
+${conversationContext}
+
+CURRENT USER MESSAGE: "${userMessage}"
+
+⚠️ IMPORTANT: Use the conversation context to determine if the current message is complete or incomplete.
+- If location was mentioned recently, don't mark it as missing
+- If cuisine was mentioned recently, don't mark it as missing
+- Only classify as "incomplete_request" if truly missing information from RECENT context
+
+` : `User message: "${userMessage}"`;
+
   const prompt = `You are an expert intent classifier for a restaurant recommendation chatbot. Analyze the user's message and classify their intent accurately.
 
-User message: "${userMessage}"
+${contextSection}
 
 Classify this into ONE of these intent types (in order of priority):
 

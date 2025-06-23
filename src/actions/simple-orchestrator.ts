@@ -66,8 +66,19 @@ export async function orchestrate(
     
     console.log(`🧠 Context: ${contextAnalysis.contextType} (confidence: ${contextAnalysis.confidence})`);
     
-    // 🎯 STEP 2: Classify intent using the resolved message
-    const intent = await classifyUserIntent(processedMessage);
+    // 🎯 STEP 2: Build recent conversation context for smart intent classification
+    const recentMessages = chatState.messages
+      .filter(msg => msg.id !== 'welcome')
+      .slice(-3); // Last 3 messages for context
+    
+    const conversationContext = recentMessages.length > 0 
+      ? recentMessages.map(msg => 
+          `${msg.role.toUpperCase()}: ${msg.content}`
+        ).join('\n')
+      : undefined;
+    
+    // 🎯 STEP 3: Classify intent using the resolved message + conversation context
+    const intent = await classifyUserIntent(processedMessage, conversationContext);
     console.log(`🎯 Classified intent: ${intent.type} (confidence: ${intent.confidence})`);
     
     let response = '';
@@ -75,7 +86,7 @@ export async function orchestrate(
     let quickActions: QuickAction[] = [];
     let selectedRestaurant: Place | undefined;
     
-    // 📊 STEP 3: Build enhanced context for better understanding
+    // 📊 STEP 4: Build enhanced context for better understanding
     const enhancedContext = buildEnhancedContext(chatState);
     console.log('📊 Enhanced context built');
     
