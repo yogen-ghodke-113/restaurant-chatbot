@@ -8,72 +8,36 @@
 \\?\D:\Workspace\RedditFoodRecommender\restaurant-chatbot\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node
    Γû▓ Next.js 15.3.4
    - Local:        http://localhost:3000
-   - Network:      http://10.8.153.109:3000
+   - Network:      http://10.32.188.125:3000
    - Environments: .env.local
 
  Γ£ô Starting...
- Γ£ô Ready in 2.3s
+ Γ£ô Ready in 2.7s
  Γùï Compiling / ...
- Γ£ô Compiled / in 4.8s (1296 modules)
+ Γ£ô Compiled / in 6.3s (1314 modules)
  ΓÜá Unsupported metadata viewport is configured in metadata export in /. Please move it to viewport export instead.
 Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
- GET / 200 in 5570ms
-Processing user message: "Best Mediterranean restaurants in Flatiron"
+ GET / 200 in 6779ms
+Processing user message: "Is Per Se expensive?"
 ≡ƒöì Analyzing session context...
 ≡ƒºá Session Context Analysis: {
-  original: 'Best Mediterranean restaurants in Flatiron',
-  resolved: 'Best Mediterranean restaurants in Flatiron',
+  original: 'Is Per Se expensive?',
+  resolved: 'Is Per Se expensive?',
   contextType: 'none',
   confidence: 0
 }
 ≡ƒºá Context: none (confidence: 0)
 ≡ƒºá LLM Intent Classification:
-- Intent: restaurant_search
+- Intent: restaurant_pricing
 - Confidence: 1
-- Extracted data: {"cuisine":"Mediterranean","location":"Flatiron","mealType":"dinner","missingInfo":[],"restaurant1":"Barbounia","restaurant2":"Kyma","restaurantName":"Barbounia"}
-- Reasoning: The user is asking for a list of restaurants ('Best...restaurants') based on a specific cuisine ('Mediterranean') and location ('Flatiron'). This is a classic restaurant search query.
-≡ƒÄ» Classified intent: restaurant_search (confidence: 1)
+- Extracted data: {"restaurantName":"Per Se"}
+- Reasoning: The user is asking a direct question about the price ('expensive?') of a specific restaurant ('Per Se'), which directly maps to the restaurant_pricing intent.
+≡ƒÄ» Classified intent: restaurant_pricing (confidence: 1)
 ≡ƒôè Enhanced context built
-≡ƒÅ¬ Restaurant search intent detected
-≡ƒîì Resolving location worldwide: "Flatiron"
-≡ƒôï Google Geocoding API status: ZERO_RESULTS
-Γä╣∩╕Å Google Geocoding API: No results found for this location
-Γ£à LLM Geographic Intelligence succeeded
-≡ƒù║∩╕Å Location resolved: Flatiron ΓåÆ Flatiron Building, New York, USA
-≡ƒôì Coordinates: 40.741086, -73.989624
-Restaurant search completed in 10854ms
-Γ£à Google Places API succeeded
-Orchestration completed in 28672ms
- POST / 200 in 28718ms
-Processing user message: "Top restaurants near Hoboken"
-≡ƒöì Analyzing session context...
-≡ƒºá Session Context Analysis: {
-  original: 'Top restaurants near Hoboken',
-  resolved: 'Top restaurants near Hoboken',
-  contextType: 'none',
-  confidence: 1
-}
-≡ƒºá Context: none (confidence: 1)
-≡ƒºá LLM Intent Classification:
-- Intent: restaurant_search
-- Confidence: 1
-- Extracted data: {"cuisine":"any","location":"Hoboken","mealType":"any","missingInfo":[],"restaurant1":"null","restaurant2":"null","restaurantName":"null"}
-- Reasoning: The user is asking for a list of 'Top restaurants' and has provided a specific location, 'Hoboken'. This is a direct request to find restaurants, which matches the 'restaurant_search' intent.
-≡ƒÄ» Classified intent: restaurant_search (confidence: 1)
-≡ƒôè Enhanced context built
-≡ƒÅ¬ Restaurant search intent detected
-≡ƒîì Resolving location worldwide: "Hoboken"
-≡ƒôï Google Geocoding API status: OK
-Γ£à Google Geocoding API: Success for "Hoboken"
-   ≡ƒôì Coordinates: 40.7371004, -74.03130469999999
-   ≡ƒÄ» Confidence: 0.85
-Γ£à Google Geocoding API succeeded
-≡ƒù║∩╕Å Location resolved: Hoboken ΓåÆ Hoboken, NJ, USA
-≡ƒôì Coordinates: 40.7371004, -74.03130469999999
-Restaurant search completed in 864ms
-Γ£à Google Places API succeeded
-Orchestration completed in 15969ms
- POST / 200 in 15985ms
- ΓÜá Unsupported metadata viewport is configured in metadata export in /. Please move it to viewport export instead.
-Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
- GET / 200 in 79ms
+≡ƒÆ░ Restaurant pricing intent detected
+≡ƒöì Getting pricing info using Google Search grounding...
+≡ƒöì Generating grounded content with Google Search...
+Γ£à Found grounding metadata
+≡ƒôè Grounding details: { searchQueries: 5, citations: 10 }
+Orchestration completed in 38615ms
+ POST / 200 in 38660ms

@@ -130,11 +130,6 @@ Be precise and only detect context when you're confident (>0.7).`;
       // Fallback: Try without structured output
       console.log('🔄 Fallback: Using simple session context analysis...');
       try {
-        const fallbackModel = genAI.getGenerativeModel({
-          model: 'gemini-2.5-pro',
-          generationConfig: { temperature: 0.1, maxOutputTokens: 500 },
-        });
-        
         const simplePrompt = `Analyze this message in context: "${currentMessage}"
         
 Previous conversation: ${conversationHistory}
@@ -145,6 +140,11 @@ Does this message reference a previous restaurant or location? Respond with just
 - LOCATION if it implies a previous location
 - FOLLOW_UP if it's a follow-up question`;
 
+        const fallbackModel = genAI.getGenerativeModel({
+          model: 'gemini-2.5-pro',
+          generationConfig: { temperature: 0.1, maxOutputTokens: 500 },
+        });
+        
         const fallbackResult = await fallbackModel.generateContent(simplePrompt);
         const fallbackResponse = fallbackResult.response.text().trim().toUpperCase();
         

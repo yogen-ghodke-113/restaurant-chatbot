@@ -141,7 +141,7 @@ export async function orchestrate(
     // Send user message and get response
     const result = await chat.sendMessage(userMessage);
     const response = result.response;
-    
+
     let toolResults: ToolResult[] = [];
     let finalResponse = '';
     
@@ -159,7 +159,18 @@ export async function orchestrate(
       // Send tool results back to Gemini for synthesis
       const synthesisPrompt = buildSynthesisPrompt(userMessage, toolResults, chatState);
       
-      const synthesisResult = await chat.sendMessage(synthesisPrompt);
+      // Continue the chat with tool results
+      const toolResponseParts = toolResults.map(result => ({
+        functionResponse: {
+          name: result.toolName,
+          response: result.data
+        }
+      }));
+      
+      const synthesisResult = await chat.sendMessage([
+        { text: synthesisPrompt },
+        ...toolResponseParts
+      ]);
       finalResponse = synthesisResult.response.text();
     } else {
       // Direct response without tools
@@ -459,16 +470,14 @@ export async function generateContent(
         thinkingBudget: 0 // Disables thinking
       };
     }
-    // Otherwise thinking is enabled by default
 
-    const model = genAI.getGenerativeModel({ 
+    const model = genAI.getGenerativeModel({
       model: 'gemini-2.5-pro',
       generationConfig,
     });
 
     const result = await model.generateContent(prompt);
-    const response = result.response;
-    return response.text();
+    return result.response.text();
   } catch (error) {
     console.error('Error in generateContent:', error);
     throw error;
