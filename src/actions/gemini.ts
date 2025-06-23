@@ -510,7 +510,7 @@ export async function generateGroundedContent(
     const model = genAI.getGenerativeModel({ 
       model: 'gemini-2.5-pro',
       tools: [
-        { googleSearch: {} }
+        { googleSearchRetrieval: {} }
       ],
       generationConfig,
       systemInstruction: "Think step by step and provide detailed, accurate information. When you need current or specific information about restaurants, menus, reviews, or locations, please use Google Search to find the most up-to-date information. Always cite sources when using search results."
