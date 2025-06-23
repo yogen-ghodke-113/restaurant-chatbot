@@ -11,9 +11,10 @@ interface ChatMessagesProps {
   messages: ChatMessage[];
   isLoading?: boolean;
   onSelectRestaurant: (restaurant: Place) => void;
+  selectedRestaurant?: Place;
 }
 
-export function ChatMessages({ messages, isLoading, onSelectRestaurant }: ChatMessagesProps) {
+export function ChatMessages({ messages, isLoading, onSelectRestaurant, selectedRestaurant }: ChatMessagesProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when new messages arrive
@@ -132,7 +133,7 @@ export function ChatMessages({ messages, isLoading, onSelectRestaurant }: ChatMe
                         <RestaurantCard
                           key={restaurant.id || `restaurant-${index}`}
                           restaurant={restaurant}
-                          isSelected={false}
+                          isSelected={selectedRestaurant?.id === restaurant.id}
                           onSelect={onSelectRestaurant}
                           rank={index + 1}
                         />

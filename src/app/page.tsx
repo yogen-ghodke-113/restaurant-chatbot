@@ -71,6 +71,7 @@ export default function Home() {
                 messages={chatState.messages}
                 isLoading={chatState.isLoading}
                 onSelectRestaurant={selectRestaurant}
+                selectedRestaurant={chatState.selectedRestaurant}
               />
               
               {/* Typing Indicator */}
