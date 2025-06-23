@@ -510,10 +510,10 @@ export async function generateGroundedContent(
     const model = genAI.getGenerativeModel({ 
       model: 'gemini-2.5-pro',
       tools: [
-        { googleSearchRetrieval: {} }
+        { googleSearch: {} }
       ],
       generationConfig,
-      systemInstruction: "Think step by step and provide detailed, accurate information based on current web sources. Use Google Search to find the most up-to-date information."
+      systemInstruction: "Think step by step and provide detailed, accurate information. When you need current or specific information about restaurants, menus, reviews, or locations, please use Google Search to find the most up-to-date information. Always cite sources when using search results."
     });
 
     console.log('🔍 Generating grounded content with Google Search...');
@@ -556,10 +556,36 @@ export async function generateGroundedContent(
     
   } catch (error) {
     console.error('Gemini grounded content generation error:', error);
-    throw new CustomAPIError({
-      code: 'GROUNDED_CONTENT_ERROR',
-      message: 'Failed to generate grounded content',
-      details: { error }
-    });
+    
+    // Fallback: Try without grounding if grounding fails
+    console.log('🔄 Fallback: Attempting generation without grounding...');
+    try {
+      const fallbackModel = genAI.getGenerativeModel({ 
+        model: 'gemini-2.5-pro',
+        generationConfig: {
+          temperature: options?.temperature || 0.1,
+          maxOutputTokens: options?.maxOutputTokens || 2048,
+        }
+      });
+      
+      const fallbackResult = await fallbackModel.generateContent(prompt);
+      const fallbackResponse = fallbackResult.response;
+      
+      console.log('✅ Fallback generation succeeded (without grounding)');
+      return {
+        text: fallbackResponse.text(),
+        groundingMetadata: undefined,
+        searchQueries: [],
+        citations: []
+      };
+      
+    } catch (fallbackError) {
+      console.error('Fallback generation also failed:', fallbackError);
+      throw new CustomAPIError({
+        code: 'GROUNDED_CONTENT_ERROR',
+        message: 'Failed to generate grounded content and fallback failed',
+        details: { error, fallbackError }
+      });
+    }
   }
 } 
