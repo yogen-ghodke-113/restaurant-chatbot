@@ -1,7 +1,7 @@
 'use server';
 
 import { ChatState, ChatMessage, Place } from '@/types';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 import { buildConversationSummary } from '@/lib/session-utils';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
@@ -10,7 +10,7 @@ if (!GEMINI_API_KEY) {
   throw new Error('GEMINI_API_KEY environment variable is required');
 }
 
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+const client = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
 /**
  * 🧠 Session Context Manager
@@ -111,13 +111,35 @@ Be precise and only detect context when you're confident (>0.7).`;
       }
     };
 
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-2.5-pro',
-      generationConfig,
+    const result = await client.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: {
+        temperature: 0.1,
+        maxOutputTokens: 1000,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: "object",
+          properties: {
+            hasContext: { type: "boolean" },
+            contextType: { type: "string" },
+            resolvedMessage: { type: "string" },
+            extractedContext: {
+              type: "object",
+              properties: {
+                referencedRestaurant: { type: "string" },
+                impliedLocation: { type: "string" },
+                previousSearch: { type: "string" },
+                comparisonItems: { type: "array", items: { type: "string" } }
+              }
+            },
+            confidence: { type: "number" }
+          },
+          required: ["hasContext", "contextType", "resolvedMessage", "extractedContext", "confidence"]
+        }
+      }
     });
-
-    const result = await model.generateContent(prompt);
-    const response = result.response.text();
+    const response = result.text || "{}";
     
     // Parse structured JSON output
     let analysis;
@@ -140,13 +162,15 @@ Does this message reference a previous restaurant or location? Respond with just
 - LOCATION if it implies a previous location
 - FOLLOW_UP if it's a follow-up question`;
 
-        const fallbackModel = genAI.getGenerativeModel({
-          model: 'gemini-2.5-pro',
-          generationConfig: { temperature: 0.1, maxOutputTokens: 500 },
+        const fallbackResult = await client.models.generateContent({
+          model: 'gemini-2.5-flash',
+          contents: simplePrompt,
+          config: {
+            temperature: 0.1,
+            maxOutputTokens: 500
+          }
         });
-        
-        const fallbackResult = await fallbackModel.generateContent(simplePrompt);
-        const fallbackResponse = fallbackResult.response.text().trim().toUpperCase();
+        const fallbackResponse = (fallbackResult.text || "NONE").trim().toUpperCase();
         
         // Simple parsing
         const contextType = fallbackResponse.includes('RESTAURANT') ? 'restaurant_reference' :

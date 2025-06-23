@@ -1,6 +1,6 @@
 'use server';
 
-import { GoogleGenerativeAI, SchemaType, FunctionDeclaration } from '@google/generative-ai';
+import { GoogleGenAI } from '@google/genai';
 import { 
   ChatState, 
   ChatMessage, 
@@ -28,22 +28,22 @@ if (!GEMINI_API_KEY) {
   throw new Error('GEMINI_API_KEY environment variable is required');
 }
 
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+const client = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
 
-// Function calling schemas for Gemini
-const tools: FunctionDeclaration[] = [
+// Function calling schemas for Gemini (currently disabled for new API migration)
+const tools = [
   {
     name: 'searchRestaurants',
     description: 'Find restaurants by cuisine type and location. Returns top 5 rated restaurants with comprehensive scoring.',
     parameters: {
-      type: SchemaType.OBJECT,
+      type: "object",
       properties: {
         cuisine: {
-          type: SchemaType.STRING,
+          type: "string",
           description: 'Type of cuisine (e.g., Mediterranean, Italian, Thai, Chinese, Mexican, etc.)',
         },
         location: {
-          type: SchemaType.STRING, 
+          type: "string", 
           description: 'Location to search (e.g., Flatiron, Manhattan, Brooklyn, NYC)',
         },
       },
@@ -54,10 +54,10 @@ const tools: FunctionDeclaration[] = [
     name: 'webSearch',
     description: 'Search the web for restaurant reviews, menu recommendations, and general information',
     parameters: {
-      type: SchemaType.OBJECT,
+      type: "object",
       properties: {
         query: {
-          type: SchemaType.STRING,
+          type: "string",
           description: 'Search query for restaurant information (e.g., "what to order at Joe\'s Pizza")',
         },
       },
@@ -68,14 +68,14 @@ const tools: FunctionDeclaration[] = [
     name: 'getRedditData',
     description: 'Get Reddit discussions and user experiences about a specific restaurant',
     parameters: {
-      type: SchemaType.OBJECT,
+      type: "object",
       properties: {
         restaurantName: {
-          type: SchemaType.STRING,
+          type: "string",
           description: 'Name of the restaurant to search for on Reddit',
         },
         location: {
-          type: SchemaType.STRING,
+          type: "string",
           description: 'Location of the restaurant for more specific results (optional)',
         },
       },
@@ -86,18 +86,18 @@ const tools: FunctionDeclaration[] = [
     name: 'compareRestaurants',
     description: 'Compare two restaurants and provide detailed analysis',
     parameters: {
-      type: SchemaType.OBJECT,
+      type: "object",
       properties: {
         restaurant1: {
-          type: SchemaType.STRING,
+          type: "string",
           description: 'Name of the first restaurant',
         },
         restaurant2: {
-          type: SchemaType.STRING,
+          type: "string",
           description: 'Name of the second restaurant',
         },
         location: {
-          type: SchemaType.STRING,
+          type: "string",
           description: 'Location context for the comparison (optional)',
         },
       },
@@ -118,64 +118,23 @@ export async function orchestrate(
   try {
     console.log(`Processing user message: "${userMessage}"`);
     
-    const model = genAI.getGenerativeModel({ 
-      model: 'gemini-2.5-pro',
-      tools: [{ functionDeclarations: tools }],
-      generationConfig: {
-        temperature: 0.1,
-        maxOutputTokens: 2048,
-      },
-    });
-
-    // Build conversation history for context
-    const history = buildConversationHistory(chatState);
-    
-    // Create system prompt with context
+    // For now, use simple content generation - function calling will be added later
     const systemPrompt = createSystemPrompt(chatState);
+    const fullPrompt = `${systemPrompt}\n\nUser: ${userMessage}`;
     
-    const chat = model.startChat({
-      history,
-      systemInstruction: systemPrompt,
+    const config = {
+      temperature: 0.1,
+      maxOutputTokens: 2048,
+    };
+
+    const result = await client.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: fullPrompt,
+      config: config
     });
-
-    // Send user message and get response
-    const result = await chat.sendMessage(userMessage);
-    const response = result.response;
-
-    let toolResults: ToolResult[] = [];
-    let finalResponse = '';
     
-    // Handle function calls if present
-    const functionCalls = response.functionCalls();
-    if (functionCalls && functionCalls.length > 0) {
-      console.log(`Executing ${functionCalls.length} function calls`);
-      
-      // Execute all function calls
-      for (const call of functionCalls) {
-        const toolResult = await executeTool(call.name, call.args);
-        toolResults.push(toolResult);
-      }
-      
-      // Send tool results back to Gemini for synthesis
-      const synthesisPrompt = buildSynthesisPrompt(userMessage, toolResults, chatState);
-      
-      // Continue the chat with tool results
-      const toolResponseParts = toolResults.map(result => ({
-        functionResponse: {
-          name: result.toolName,
-          response: result.data
-        }
-      }));
-      
-      const synthesisResult = await chat.sendMessage([
-        { text: synthesisPrompt },
-        ...toolResponseParts
-      ]);
-      finalResponse = synthesisResult.response.text();
-    } else {
-      // Direct response without tools
-      finalResponse = response.text();
-    }
+    let toolResults: ToolResult[] = [];
+    let finalResponse = result.text || "I apologize, but I wasn't able to generate a response. Please try again.";
     
     // Generate quick actions based on the response
     const quickActions = generateQuickActions(toolResults, chatState);
@@ -449,35 +408,27 @@ export async function generateContent(
   }
 ): Promise<string> {
   try {
-    const generationConfig: any = {
+    const config: any = {
       temperature: options?.temperature ?? 0.1,
       maxOutputTokens: options?.maxOutputTokens ?? 1024,
     };
 
     // Add structured output configuration if provided
     if (options?.response_mime_type) {
-      generationConfig.responseMimeType = options.response_mime_type;
+      config.responseMimeType = options.response_mime_type;
     }
     
     if (options?.response_schema) {
-      generationConfig.responseSchema = options.response_schema;
+      config.responseSchema = options.response_schema;
     }
 
-    // Thinking is enabled by default for Gemini 2.5 models
-    // Only disable if explicitly requested
-    if (options?.enableThinking === false) {
-      generationConfig.thinkingConfig = {
-        thinkingBudget: 0 // Disables thinking
-      };
-    }
-
-    const model = genAI.getGenerativeModel({
-      model: 'gemini-2.5-pro',
-      generationConfig,
+    const result = await client.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: config
     });
 
-    const result = await model.generateContent(prompt);
-    return result.response.text();
+    return result.text || "";
   } catch (error) {
     console.error('Error in generateContent:', error);
     throw error;
@@ -502,38 +453,30 @@ export async function generateGroundedContent(
   citations?: Array<{ url: string; title: string }>;
 }> {
   try {
-    const generationConfig: any = {
+    console.log('🔍 Generating grounded content with Google Search...');
+    
+    // Create Google Search grounding tool as per new API docs
+    const grounding_tool = {
+      googleSearch: {}
+    };
+
+    const config = {
+      tools: [grounding_tool],
       temperature: options?.temperature || 0.1,
       maxOutputTokens: options?.maxOutputTokens || 2048,
     };
 
-    // Thinking is enabled by default for Gemini 2.5 models
-    // Only disable if explicitly requested
-    if (options?.enableThinking === false) {
-      generationConfig.thinkingConfig = {
-        thinkingBudget: 0 // Disables thinking
-      };
-    }
-    // Otherwise thinking is enabled by default (no config needed)
-
-    const model = genAI.getGenerativeModel({ 
-      model: 'gemini-2.5-pro',
-      tools: [
-        { googleSearchRetrieval: {} }
-      ],
-      generationConfig,
-      systemInstruction: "Think step by step and provide detailed, accurate information. When you need current or specific information about restaurants, menus, reviews, or locations, please use Google Search to find the most up-to-date information. Always cite sources when using search results."
+    const result = await client.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: config
     });
-
-    console.log('🔍 Generating grounded content with Google Search...');
-    const result = await model.generateContent(prompt);
-    const response = result.response;
     
     let searchQueries: string[] = [];
     let citations: Array<{ url: string; title: string }> = [];
     
     // Extract grounding metadata if available
-    const groundingMetadata = (response as any).candidates?.[0]?.groundingMetadata;
+    const groundingMetadata = result.candidates?.[0]?.groundingMetadata;
     
     if (groundingMetadata) {
       console.log('✅ Found grounding metadata');
@@ -557,7 +500,7 @@ export async function generateGroundedContent(
     }
 
     return {
-      text: response.text(),
+      text: result.text || "",
       groundingMetadata,
       searchQueries,
       citations
@@ -569,20 +512,18 @@ export async function generateGroundedContent(
     // Fallback: Try without grounding if grounding fails
     console.log('🔄 Fallback: Attempting generation without grounding...');
     try {
-      const fallbackModel = genAI.getGenerativeModel({ 
-        model: 'gemini-2.5-pro',
-        generationConfig: {
+      const fallbackResult = await client.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config: {
           temperature: options?.temperature || 0.1,
           maxOutputTokens: options?.maxOutputTokens || 2048,
         }
       });
       
-      const fallbackResult = await fallbackModel.generateContent(prompt);
-      const fallbackResponse = fallbackResult.response;
-      
       console.log('✅ Fallback generation succeeded (without grounding)');
       return {
-        text: fallbackResponse.text(),
+        text: fallbackResult.text || "",
         groundingMetadata: undefined,
         searchQueries: [],
         citations: []

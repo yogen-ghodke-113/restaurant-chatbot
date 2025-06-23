@@ -81,27 +81,8 @@ export async function orchestrate(
     
     // Handle different intent types with enhanced conversation
     
-    // Greeting - friendly welcome
-    if (intent.type === 'greeting') {
-      const greetings = [
-        "Hi there! 👋 I'm your friendly restaurant assistant. How can I help you discover amazing food today?",
-        "Hello! 🍽️ Ready to find some delicious restaurants? I can help you search, get menu recommendations, or find Reddit reviews!",
-        "Hey! 😊 Looking for a great place to eat? I'm here to help with restaurant recommendations in NYC and beyond!",
-        "Good to see you! 🌟 What kind of culinary adventure are you in the mood for today?"
-      ];
-      
-      response = greetings[Math.floor(Math.random() * greetings.length)];
-      
-      // Add quick action suggestions
-      quickActions = [
-        { text: "Find pizza places", action: "best pizza in Manhattan" },
-        { text: "Brunch spots", action: "good brunch in Brooklyn" },
-        { text: "Surprise me!", action: "trending restaurants NYC" }
-      ];
-    }
-    
     // Incomplete request - ask for missing information
-    else if (intent.type === 'incomplete_request') {
+    if (intent.type === 'incomplete_request') {
       const cuisine = intent.extractedData.cuisine;
       const missingInfo = intent.extractedData.missingInfo || [];
       
@@ -256,37 +237,36 @@ export async function orchestrate(
         try {
           console.log('🔍 Using Gemini 2.5 Pro with Google Search grounding for comprehensive restaurant insights...');
           
-          // Comprehensive prompt combining menu recommendations and Reddit insights
-          const comprehensivePrompt = `Give me concise insights about ${restaurantName} in ${location}. Keep it organized but brief (3-5 paragraphs max):
+          // Context-aware prompt that addresses the user's specific question
+          const userQuestion = contextAnalysis.resolvedMessage || userMessage;
+          const comprehensivePrompt = `User question: "${userQuestion}"
 
-## Menu Recommendations 🍽️
-- What are the MUST-TRY dishes and signature items?
-- What do food critics and reviewers say are the best things to order?
-- Any items to avoid or that get poor reviews?
-- Price range and value for money?
+Please answer this specific question about ${restaurantName} in ${location}. Keep it focused and concise (3-4 paragraphs max):
 
-## Reddit Community Opinions 💬
-- What do Reddit users say about this restaurant?
-- Quote specific Reddit user comments and experiences (with usernames if available)
-- What dishes do Redditors specifically recommend?
-- Any Reddit warnings or things to avoid?
-- Overall Reddit sentiment (positive/negative/mixed)?
+🎯 **Direct Answer**
+- Address the user's specific question directly
+- Use real-time web search results and citations
+- Include specific examples and evidence
 
-## Restaurant Overview ⭐
-- What type of cuisine and dining experience?
-- Atmosphere, service quality, and ambiance?
-- Best times to visit, reservations needed?
-- Overall consensus from multiple review sources?
+💬 **Community Evidence**
+- What do Reddit users and reviewers say that supports your answer?
+- Quote specific opinions and experiences if available
+- Include both positive and negative perspectives
+
+📊 **Context & Details**
+- Provide relevant background information
+- Compare to similar restaurants if helpful
+- Mention any important caveats or considerations
 
 FORMATTING GUIDELINES:
 - Use markdown formatting for better readability
 - Use emojis sparingly but appropriately (🍕 🌟 💰 📍 etc.)
-- Break up text with bullet points, headers, or short sections
-- Use **bold** for key info like restaurant names, prices, ratings
+- Use **bold** for key info like restaurant names, facts, quotes
 - Keep paragraphs short (2-3 sentences max)
 - Lead with the most important information first
+- Focus on answering the specific question asked
 
-Please provide a well-organized response with clear sections, specific menu recommendations, and quoted Reddit user feedback. Focus on actionable advice for someone planning to visit.`;
+CRITICAL: Answer the user's specific question first, then provide supporting details. Don't give a generic restaurant overview.`;
 
           const groundedResponse = await generateGroundedContent(
             comprehensivePrompt,
@@ -466,53 +446,165 @@ Use markdown formatting, emojis, and **bold** for key pricing info. Lead with th
       }
     }
     
-    // General questions using Google Search grounding
-    else {
-      console.log('❓ General question - using Google Search grounding');
+    // Conversational intent - greetings, help, general chat
+    else if (intent.type === 'conversational') {
+      console.log('💬 Conversational intent detected');
       
-      try {
-        const generalPrompt = `${processedMessage}
-
-Please provide a helpful, concise response (3-4 paragraphs max):
-
-FORMATTING GUIDELINES:
-- Use markdown formatting for better readability
-- Use emojis sparingly but appropriately (🍕 🌟 💰 📍 etc.)
-- Break up text with bullet points, headers, or short sections
-- Use **bold** for key info like restaurant names, prices, ratings
-- Keep paragraphs short (2-3 sentences max)
-- Lead with the most important information first`;
-
-        const groundedResponse = await generateGroundedContent(
-          generalPrompt,
-          { 
-            temperature: 0.1, 
-            enableThinking: true,
-            maxOutputTokens: 2048
-          }
-        );
+      // Handle different types of conversational messages
+      const message = userMessage.toLowerCase();
+      
+      if (message.includes('hi') || message.includes('hello') || message.includes('hey')) {
+        // Greetings
+        const greetings = [
+          "Hi there! 👋 I'm your friendly restaurant assistant. How can I help you discover amazing food today?",
+          "Hello! 🍽️ Ready to find some great restaurants? What are you in the mood for?",
+          "Hey! 👋 I'm here to help you find delicious food. What can I help you with today?"
+        ];
+        response = greetings[Math.floor(Math.random() * greetings.length)];
         
-        response = groundedResponse.text;
+        quickActions = [
+          { text: "🍕 Find pizza places", action: "best pizza in Manhattan" },
+          { text: "🥐 Brunch spots", action: "good brunch in Brooklyn" },
+          { text: "🍜 Asian food", action: "best Asian restaurants NYC" },
+          { text: "🎲 Surprise me!", action: "trending restaurants NYC" }
+        ];
+      } else if (message.includes('thank') || message.includes('thanks')) {
+        // Thanks
+        response = "You're very welcome! 😊 Happy to help you discover great food. Is there anything else I can help you find?";
         
-        // Add citations if available
-        if (groundedResponse.citations && groundedResponse.citations.length > 0) {
-          response += `\n\n### Sources\n`;
-          groundedResponse.citations.forEach((citation, index) => {
-            response += `${index + 1}. [${citation.title}](${citation.url})\n`;
-          });
+        quickActions = [
+          { text: "Find more restaurants", action: "best restaurants near me" },
+          { text: "Compare restaurants", action: "compare top restaurants" }
+        ];
+      } else if (message.includes('help') || message.includes('what can you do')) {
+        // Help requests
+        response = `I'm your AI restaurant assistant! 🤖 Here's what I can help you with:
+
+🔍 **Find Restaurants**: "best pizza in Manhattan", "sushi near me"
+🍽️ **Get Insights**: "what should I order at Joe's Pizza?"
+⚖️ **Compare Places**: "compare Katz's vs Pastrami Queen"
+💰 **Check Pricing**: "is Per Se expensive?"
+
+Just ask me anything about restaurants and I'll help you discover amazing food! 😊`;
+
+        quickActions = [
+          { text: "🍕 Find pizza", action: "best pizza places" },
+          { text: "🥘 Find Italian", action: "Italian restaurants" },
+          { text: "🍜 Find Asian", action: "Asian restaurants" },
+          { text: "🥐 Find brunch", action: "brunch spots" }
+        ];
+      } else {
+        // General conversational response
+        try {
+          const conversationalPrompt = `You are a friendly restaurant assistant. Respond naturally to this message: "${userMessage}"
+
+Keep your response:
+- Conversational and friendly
+- Brief (1-2 sentences)
+- Related to restaurants/food when possible
+- Encouraging the user to ask about restaurants
+
+If it's not restaurant-related, acknowledge it briefly and guide them back to restaurants.`;
+
+          const groundedResponse = await generateGroundedContent(
+            conversationalPrompt,
+            { 
+              temperature: 0.3, // More creative for conversation
+              enableThinking: false,
+              maxOutputTokens: 512
+            }
+          );
+          
+          response = groundedResponse.text || "That's interesting! Is there anything restaurant-related I can help you with? 🍽️";
+          
+        } catch (error) {
+          console.error('Conversational response failed:', error);
+          response = "I appreciate you sharing that! 😊 Is there anything restaurant-related I can help you with today?";
         }
         
-        // Add general quick actions
         quickActions = [
           { text: "Find restaurants", action: "best restaurants near me" },
           { text: "Pizza places", action: "best pizza in Manhattan" },
           { text: "Brunch spots", action: "good brunch places" }
         ];
-        
-      } catch (error) {
-        console.error('General query failed:', error);
-        response = `I'm having trouble processing your request right now. Please try rephrasing your question or try again in a moment.`;
       }
+    }
+    
+    // Follow-up intent - elaboration requests
+    else if (intent.type === 'follow_up') {
+      console.log('🔄 Follow-up intent detected');
+      
+      // Get the last assistant message for context
+      const lastAssistantMessage = chatState.messages
+        .filter(msg => msg.role === 'assistant')
+        .slice(-1)[0];
+      
+      if (lastAssistantMessage) {
+        try {
+          const followUpPrompt = `The user is asking for elaboration on this previous response:
+
+PREVIOUS RESPONSE:
+"${lastAssistantMessage.content}"
+
+USER FOLLOW-UP REQUEST:
+"${userMessage}"
+
+Please provide additional details, explanation, or elaboration. Keep it:
+- Focused on what they're asking for
+- Informative but concise (2-3 paragraphs max)  
+- Related to restaurants/food
+- Use markdown formatting and emojis appropriately
+
+If you need real-time information to elaborate, search for it.`;
+
+          const groundedResponse = await generateGroundedContent(
+            followUpPrompt,
+            { 
+              temperature: 0.1, 
+              enableThinking: true,
+              maxOutputTokens: 2048
+            }
+          );
+          
+          response = groundedResponse.text;
+          
+          // Add citations if available
+          if (groundedResponse.citations && groundedResponse.citations.length > 0) {
+            response += `\n\n### Sources\n`;
+            groundedResponse.citations.forEach((citation, index) => {
+              response += `${index + 1}. [${citation.title}](${citation.url})\n`;
+            });
+          }
+          
+        } catch (error) {
+          console.error('Follow-up response failed:', error);
+          response = "I'd be happy to elaborate! Could you be more specific about what you'd like me to explain further? 🤔";
+        }
+        
+        quickActions = [
+          { text: "Tell me more", action: "can you provide more details?" },
+          { text: "Find similar", action: "find similar restaurants" }
+        ];
+      } else {
+        response = "I'd love to elaborate, but I don't see a previous message to expand on. What would you like to know more about? 🤔";
+        
+        quickActions = [
+          { text: "Find restaurants", action: "best restaurants near me" },
+          { text: "Get recommendations", action: "what should I eat today?" }
+        ];
+      }
+    }
+    
+    // Fallback for any unhandled intents
+    else {
+      console.log('❓ Unhandled intent - using conversational fallback');
+      response = "I'm not quite sure what you're looking for, but I'm here to help with all things food! 🤔 Feel free to ask me about restaurants, what to order, or where to eat.";
+      
+      quickActions = [
+        { text: "Find restaurants", action: "best restaurants near me" },
+        { text: "Pizza places", action: "best pizza in Manhattan" },
+        { text: "Brunch spots", action: "good brunch places" }
+      ];
     }
     
     const processingTime = Date.now() - startTime;

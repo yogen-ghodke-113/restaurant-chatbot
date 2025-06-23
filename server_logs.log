@@ -2,42 +2,71 @@
 > restaurant-chatbot@0.1.0 dev
 > next dev
 
- ΓÜá Attempted to load @next/swc-win32-x64-msvc, but an error occurred: \\?\D:\Workspace\RedditFoodRecommender\restaurant-chatbot\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node is not a valid Win32 application.
-\\?\D:\Workspace\RedditFoodRecommender\restaurant-chatbot\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node
- ΓÜá Attempted to load @next/swc-win32-x64-msvc, but an error occurred: \\?\D:\Workspace\RedditFoodRecommender\restaurant-chatbot\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node is not a valid Win32 application.
-\\?\D:\Workspace\RedditFoodRecommender\restaurant-chatbot\node_modules\@next\swc-win32-x64-msvc\next-swc.win32-x64-msvc.node
    Γû▓ Next.js 15.3.4
    - Local:        http://localhost:3000
    - Network:      http://10.32.188.125:3000
    - Environments: .env.local
 
  Γ£ô Starting...
- Γ£ô Ready in 2.7s
+ Γ£ô Ready in 2.6s
  Γùï Compiling / ...
- Γ£ô Compiled / in 6.3s (1314 modules)
+ Γ£ô Compiled / in 4.9s (1314 modules)
  ΓÜá Unsupported metadata viewport is configured in metadata export in /. Please move it to viewport export instead.
 Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
- GET / 200 in 6779ms
-Processing user message: "Is Per Se expensive?"
+ GET / 200 in 5394ms
+Both GOOGLE_API_KEY and GEMINI_API_KEY are set. Using GOOGLE_API_KEY.
+Both GOOGLE_API_KEY and GEMINI_API_KEY are set. Using GOOGLE_API_KEY.
+Processing user message: "Compare Katz's Deli vs Pastrami Queen"
 ≡ƒöì Analyzing session context...
 ≡ƒºá Session Context Analysis: {
-  original: 'Is Per Se expensive?',
-  resolved: 'Is Per Se expensive?',
+  original: "Compare Katz's Deli vs Pastrami Queen",
+  resolved: "Compare Katz's Deli vs Pastrami Queen",
   contextType: 'none',
-  confidence: 0
+  confidence: 1
 }
-≡ƒºá Context: none (confidence: 0)
+≡ƒºá Context: none (confidence: 1)
 ≡ƒºá LLM Intent Classification:
-- Intent: restaurant_pricing
-- Confidence: 1
-- Extracted data: {"restaurantName":"Per Se"}
-- Reasoning: The user is asking a direct question about the price ('expensive?') of a specific restaurant ('Per Se'), which directly maps to the restaurant_pricing intent.
-≡ƒÄ» Classified intent: restaurant_pricing (confidence: 1)
+- Intent: restaurant_comparison
+- Confidence: 0.95
+- Extracted data: {"cuisine":"null","location":"null","mealType":"null","missingInfo":[],"restaurant1":"Katz's Deli","restaurant2":"Pastrami Queen","restaurantName":"null"}
+- Reasoning: The user explicitly asks to 'Compare' two specific restaurant names, which directly indicates a 'restaurant_comparison' intent.
+≡ƒÄ» Classified intent: restaurant_comparison (confidence: 0.95)
 ≡ƒôè Enhanced context built
-≡ƒÆ░ Restaurant pricing intent detected
-≡ƒöì Getting pricing info using Google Search grounding...
+ΓÜû∩╕Å Restaurant comparison intent detected
+≡ƒöì Generating comparison using Google Search grounding...
 ≡ƒöì Generating grounded content with Google Search...
 Γ£à Found grounding metadata
-≡ƒôè Grounding details: { searchQueries: 5, citations: 10 }
-Orchestration completed in 38615ms
- POST / 200 in 38660ms
+≡ƒôè Grounding details: { searchQueries: 5, citations: 15 }
+Orchestration completed in 19362ms
+ POST / 200 in 19670ms
+Processing user message: "how is it a tourist trap?"
+≡ƒöì Analyzing session context...
+≡ƒºá Session Context Analysis: {
+  original: 'how is it a tourist trap?',
+  resolved: "How is Katz's Deli a tourist trap?",
+  contextType: 'follow_up',
+  confidence: 0.9
+}
+≡ƒºá Context: follow_up (confidence: 0.9)
+≡ƒºá LLM Intent Classification:
+- Intent: restaurant_insights
+- Confidence: 0.95
+- Extracted data: {"cuisine":"null","location":"null","mealType":"null","missingInfo":[],"restaurant1":"null","restaurant2":"null","restaurantName":"Katz's Deli"}
+- Reasoning: The user is asking for an explanation or insight about a specific restaurant, 'Katz's Deli', which falls under the 'restaurant_insights' intent.
+≡ƒÄ» Classified intent: restaurant_insights (confidence: 0.95)
+≡ƒôè Enhanced context built
+≡ƒìò Restaurant insights intent detected
+≡ƒöì Using Gemini 2.5 Pro with Google Search grounding for comprehensive restaurant insights...
+≡ƒöì Generating grounded content with Google Search...
+Γ£à Found grounding metadata
+≡ƒôè Grounding details: { searchQueries: 9, citations: 25 }
+Orchestration completed in 24549ms
+ POST / 200 in 24563ms
+ Γ£ô Compiled in 619ms (1296 modules)
+ ΓÜá Unsupported metadata viewport is configured in metadata export in /. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ GET / 200 in 89ms
+ Γ£ô Compiled in 456ms (1296 modules)
+ ΓÜá Unsupported metadata viewport is configured in metadata export in /. Please move it to viewport export instead.
+Read more: https://nextjs.org/docs/app/api-reference/functions/generate-viewport
+ GET / 200 in 72ms

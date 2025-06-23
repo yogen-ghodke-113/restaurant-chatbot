@@ -3,7 +3,7 @@
 import { generateContent } from './gemini';
 
 export interface UserIntent {
-  type: 'restaurant_search' | 'restaurant_insights' | 'restaurant_comparison' | 'restaurant_pricing' | 'general_help' | 'greeting' | 'incomplete_request' | 'context_switch' | 'unknown';
+  type: 'restaurant_search' | 'restaurant_insights' | 'restaurant_comparison' | 'restaurant_pricing' | 'incomplete_request' | 'context_switch' | 'conversational' | 'follow_up';
   confidence: number;
   extractedData: {
     restaurantName?: string;
@@ -18,29 +18,69 @@ export interface UserIntent {
 }
 
 export async function classifyUserIntent(userMessage: string): Promise<UserIntent> {
-  const prompt = `You are an intent classifier for a restaurant recommendation chatbot. Analyze the user's message and classify their intent.
+  const prompt = `You are an expert intent classifier for a restaurant recommendation chatbot. Analyze the user's message and classify their intent accurately.
 
 User message: "${userMessage}"
 
-Classify this into one of these intent types:
-1. "restaurant_search" - User wants to find restaurants (e.g., "best pizza in Manhattan", "good brunch spots")
-2. "restaurant_insights" - User wants comprehensive info about a specific restaurant including menu recommendations, Reddit opinions, what to order, reviews, etc. (e.g., "what should I order at Joe's Pizza", "what do people on Reddit say about Barbounia", "tell me about Joe's Pizza")
-3. "restaurant_comparison" - User wants to compare two or more restaurants (e.g., "Barbounia vs Kyma", "compare Thai Villa and Soothr")
-4. "restaurant_pricing" - User asks about pricing or if a restaurant is expensive (e.g., "Is Per Se expensive?", "how much does it cost")
-5. "general_help" - User needs help or guidance
-6. "greeting" - User is greeting or starting conversation (e.g., "hi", "hello", "hey there")
-7. "incomplete_request" - User wants food/restaurants but missing key info (e.g., "I want pizza" without location, "I'm hungry" without specifics)
-8. "context_switch" - User is changing their mind or switching topics (e.g., "actually I want spaghetti", "never mind, let's try Chinese")
-9. "unknown" - Cannot determine intent or nonsensical message
+Classify this into ONE of these intent types (in order of priority):
 
-Extract these details if mentioned:
-- restaurantName: Specific restaurant name mentioned
-- restaurant1: First restaurant in comparison (for restaurant_comparison type)
-- restaurant2: Second restaurant in comparison (for restaurant_comparison type)
-- location: Location/neighborhood mentioned (default to "Manhattan" if NYC context)
-- cuisine: Type of food mentioned
-- mealType: breakfast, brunch, lunch, dinner, etc.
-- missingInfo: Array of missing information needed to complete the request (e.g., ["location", "cuisine"])
+1. "restaurant_search" - User wants to FIND/DISCOVER restaurants by cuisine, location, or meal type
+   ✅ Examples: "best pizza in Manhattan", "Italian restaurants near me", "good brunch spots", "sushi places in Brooklyn", "where can I get tacos?"
+   ❌ NOT for: specific restaurant questions, comparisons, or pricing
+
+2. "restaurant_insights" - User wants DETAILED INFO about ONE specific restaurant 
+   ✅ Examples: "what should I order at Joe's Pizza?", "tell me about Katz's Deli", "how is the food at Barbounia?", "what do people say about Junior's?", "is Katz's a tourist trap?"
+   ❌ NOT for: general searches or comparisons
+
+3. "restaurant_comparison" - User wants to COMPARE 2+ specific restaurants directly
+   ✅ Examples: "Katz's vs Pastrami Queen", "compare Joe's Pizza and Prince Street", "which is better: X or Y?", "Thai Villa vs Soothr"
+   ❌ NOT for: single restaurant questions
+
+4. "restaurant_pricing" - User asks about COST/VALUE of a specific restaurant
+   ✅ Examples: "Is Per Se expensive?", "how much does dinner cost at Le Bernardin?", "is it worth the price?", "what's the average cost?"
+   ❌ NOT for: general restaurant questions
+
+5. "incomplete_request" - User wants food/restaurants but MISSING crucial details (cuisine OR location)
+   ✅ Examples: "I want pizza" (no location), "I'm hungry" (no cuisine/location), "find me food" (too vague), "good restaurants?" (no specifics)
+   ❌ NOT for: complete requests or non-food topics
+
+6. "context_switch" - User is CHANGING their mind or switching topics mid-conversation
+   ✅ Examples: "actually I want Chinese instead", "never mind, let's try Italian", "wait, I changed my mind", "forget that, show me sushi"
+   ❌ NOT for: first-time requests
+
+7. "follow_up" - User wants MORE DETAILS/ELABORATION about previous responses
+   ✅ Examples: "can you elaborate?", "tell me more", "explain that better", "go into more detail", "why is that?", "what do you mean?"
+   ❌ NOT for: new topics or greetings
+
+8. "conversational" - EVERYTHING ELSE: greetings, thanks, help, non-restaurant topics
+   ✅ Examples: "hi", "hello", "thanks", "that's great", "what can you do?", "how does this work?", "good morning", "I appreciate it"
+   ❌ NOT for: restaurant-specific requests
+
+CLASSIFICATION PRIORITY (check in this order):
+1. Is it asking for elaboration on a previous response? → follow_up
+2. Is it changing/switching topics mid-conversation? → context_switch  
+3. Does it compare 2+ specific restaurants? → restaurant_comparison
+4. Does it ask about pricing/cost of a specific restaurant? → restaurant_pricing
+5. Does it ask about ONE specific restaurant? → restaurant_insights
+6. Does it search for restaurants but missing key info? → incomplete_request
+7. Does it search for restaurants with sufficient details? → restaurant_search
+8. Everything else (greetings, thanks, help, etc.) → conversational
+
+EXTRACT these details when present:
+- restaurantName: Full restaurant name (e.g., "Joe's Pizza", "Katz's Delicatessen") - for restaurant_insights & restaurant_pricing
+- restaurant1: First restaurant name in comparison - for restaurant_comparison only
+- restaurant2: Second restaurant name in comparison - for restaurant_comparison only  
+- location: Neighborhood/city (e.g., "Manhattan", "Brooklyn", "NYC") - any geographic reference
+- cuisine: Food type (e.g., "pizza", "Italian", "sushi", "Chinese") - any cuisine mentioned
+- mealType: Meal timing (e.g., "breakfast", "brunch", "lunch", "dinner") - if specified
+- missingInfo: What's missing for incomplete requests - ONLY for incomplete_request intent
+
+CONFIDENCE SCORING:
+- 0.95+: Very clear intent with obvious keywords
+- 0.85-0.94: Clear intent with good context
+- 0.70-0.84: Probable intent but some ambiguity  
+- 0.50-0.69: Uncertain, best guess based on available info
+- <0.50: Very uncertain classification
 
 Respond ONLY with this JSON format:
 {
@@ -53,9 +93,9 @@ Respond ONLY with this JSON format:
     "location": "extracted_location_or_null", 
     "cuisine": "extracted_cuisine_or_null",
     "mealType": "extracted_meal_type_or_null",
-    "missingInfo": ["location"] // Only for incomplete_request type
+    "missingInfo": ["location", "cuisine"] // Array of what's missing, only for incomplete_request
   },
-  "reasoning": "Brief explanation of why you classified it this way"
+  "reasoning": "Brief explanation of classification decision and confidence level"
 }`;
 
   try {
@@ -132,12 +172,12 @@ Respond ONLY with this JSON format:
   } catch (error) {
     console.error('Error in intent classification:', error);
     
-    // No fallback - return unknown intent if LLM fails
+    // No fallback - return conversational intent if LLM fails
     return {
-      type: 'unknown',
+      type: 'conversational',
       confidence: 0,
       extractedData: {},
-      reasoning: 'LLM analysis failed - unable to classify intent'
+      reasoning: 'LLM analysis failed - defaulting to conversational intent'
     };
   }
 } 

@@ -1,7 +1,17 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  experimental: {
+    esmExternals: true,
+  },
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      config.externals.push({
+        '@google/genai': '@google/genai',
+      });
+    }
+    return config;
+  },
 };
 
 export default nextConfig;
