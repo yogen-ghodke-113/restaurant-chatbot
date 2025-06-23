@@ -127,8 +127,54 @@ Be precise and only detect context when you're confident (>0.7).`;
       console.error('Failed to parse structured session context JSON:', parseError);
       console.error('Raw LLM response:', response);
       
-      // No fallbacks - throw error to expose LLM issues
-      throw new Error('Session context structured JSON failed - critical LLM issue');
+      // Fallback: Try without structured output
+      console.log('🔄 Fallback: Using simple session context analysis...');
+      try {
+        const fallbackModel = genAI.getGenerativeModel({
+          model: 'gemini-2.5-pro',
+          generationConfig: { temperature: 0.1, maxOutputTokens: 500 },
+        });
+        
+        const simplePrompt = `Analyze this message in context: "${currentMessage}"
+        
+Previous conversation: ${conversationHistory}
+
+Does this message reference a previous restaurant or location? Respond with just:
+- NONE if no context needed
+- RESTAURANT if it references a previous restaurant  
+- LOCATION if it implies a previous location
+- FOLLOW_UP if it's a follow-up question`;
+
+        const fallbackResult = await fallbackModel.generateContent(simplePrompt);
+        const fallbackResponse = fallbackResult.response.text().trim().toUpperCase();
+        
+        // Simple parsing
+        const contextType = fallbackResponse.includes('RESTAURANT') ? 'restaurant_reference' :
+                           fallbackResponse.includes('LOCATION') ? 'location_reference' :
+                           fallbackResponse.includes('FOLLOW_UP') ? 'follow_up' : 'none';
+        
+        analysis = {
+          hasContext: contextType !== 'none',
+          contextType,
+          resolvedMessage: currentMessage,
+          extractedContext: {},
+          confidence: 0.5
+        };
+        
+        console.log('✅ Fallback session context succeeded');
+        
+      } catch (fallbackError) {
+        console.error('Fallback session context also failed:', fallbackError);
+        
+        // Ultimate fallback - no context
+        analysis = {
+          hasContext: false,
+          contextType: 'none',
+          resolvedMessage: currentMessage,
+          extractedContext: {},
+          confidence: 0
+        };
+      }
     }
     
     console.log('🧠 Session Context Analysis:', {
